@@ -1,5 +1,6 @@
 import asyncio
 import discord
+import datetime
 import os
 import re
 import sqlite3
@@ -21,9 +22,9 @@ discord_prefix = os.environ.get('DISCORD_PREFIX')
 discordbot = commands.Bot(command_prefix=discord_prefix)
 
 #Discord commands
-#@discordbot.event
-#async def on_ready():
-#    await discordbot.loop.create_task(follow_ups())
+@discordbot.event
+async def on_ready():
+    await discordbot.loop.create_task(follow_ups())
 
 @discordbot.event
 async def on_message(ctx):
@@ -76,8 +77,8 @@ async def crisis(ctx, user=None):
 
 @discordbot.command()
 async def qpr(ctx, user, score, time, *plan):
-    datetime = ctx.message.created_at
-    print(datetime)
+    created = datetime.datetime.now()
+    duedate = None
     plan = re.sub(r"[()]", "", str(plan))
     plan = re.sub(r"[',']", " ", plan)
 
@@ -90,18 +91,24 @@ async def qpr(ctx, user, score, time, *plan):
     if unit == 'd':
         if timevalue == "1":
             unitname = "day"
+            duedate = created + datetime.timedelta(days=int(timevalue))
         else:
             unitname = "days"
+            duedate = created + datetime.timedelta(days=int(timevalue))
     elif unit == 'm':
         if timevalue == "1":
             unitname = "minute"
+            duedate = created + datetime.timedelta(minutes=int(timevalue))
         else:
             unitname = "minutes"
+            duedate = created + datetime.timedelta(minutes=int(timevalue))
     elif unit == 's':
         if timevalue == "1":
             unitname = "second"
+            duedate = created + datetime.timedelta(seconds=int(timevalue))
         else:
             unitname = "seconds"
+            duedate = created + datetime.timedelta(seconds=int(timevalue))
 
     screening = {
         'user': user,
@@ -109,7 +116,9 @@ async def qpr(ctx, user, score, time, *plan):
         'plan': plan,
         'reminderunit': unit,
         'remindervalue': timevalue,
-        'creation': str(datetime)
+        'creation': str(created),
+        'duedate': str(duedate),
+        'reminded': 'false'
     }
     print(screening)
 
@@ -164,9 +173,6 @@ async def follow_ups():
     while True:
         await reminders()
         await asyncio.sleep(60)
-
-async def reminders():
-    
 
 # sqlite3 functions
 async def create_connection():
@@ -271,6 +277,59 @@ async def fetch_user(user):
         return screenings
     except conn.Error as error:
         print("Failed to read from sqlite table", error)
+    finally:
+        if (conn):
+            conn.commit()
+            conn.close()
+            print("The SQLLite connection is closed")
+
+async def reminders():
+    try:
+        conn = await create_connection()
+        cursor = conn.cursor()
+        sql = """SELECT * from screenings WHERE reminded = "false" """
+        print(sql)
+        cursor.execute(sql)
+        reminders = cursor.fetchall()
+        cursor.close()
+        print(reminders)
+        now = datetime.datetime.now()
+        print(now)
+
+        for item in reminders:
+            if datetime.datetime.strptime(item[7], '%Y-%m-%d %H:%M:%S.%f') < now:
+                await set_reminder_status(item[0])
+
+    except conn.Error as error:
+        print("Failed to read from sqlite table", error)
+    finally:
+        if (conn):
+            conn.commit()
+            conn.close()
+            print("The SQLLite connection is closed")
+
+async def set_reminder_status(id):
+    try:
+        conn = await create_connection()
+        cursor = conn.cursor()
+        conn = await create_connection()
+        cursor = conn.cursor()
+        sql = """UPDATE screenings SET reminded = "true" WHERE id = {0} """.format(id)
+        print(sql)
+        cursor.execute(sql)
+        cursor.close()
+        channel = discordbot.get_channel(736709932245843970)
+        screening = await fetch_screening(id)
+        user = screening[0][1]
+        score = screening[0][2]
+        plan = screening[0][6]
+        unit = screening[0][4]
+        timevalue = screening[0][5]
+        created = screening[0][3]
+        text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + "" + unit + "\n plan = " + plan + "\n created on = " + created)
+        await channel.send(content="<@&736615019172593778> the following screening requires a followup.", embed=await build_embed('discord log', 'Follow Up', text))
+    except conn.Error as error:
+        print("Failed to write to a row from sqlite table", error)
     finally:
         if (conn):
             conn.commit()
