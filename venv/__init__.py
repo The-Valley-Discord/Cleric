@@ -1,6 +1,7 @@
 import asyncio
 import discord
 import os
+import re
 import sqlite3
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -22,16 +23,34 @@ discordbot = commands.Bot(command_prefix=discord_prefix)
 #Discord commands
 @discordbot.event
 async def on_message(ctx):
-    if ctx.author.id == 557628352828014614 and '<@&736018880996048926>' in ctx.content:
+    if ctx.author.id == 557628352828014614 and '<@&736419760778117220>' in ctx.content:
         text = str('Please select the type of support you are currently seeking by reacting to this message according to your needs.\n\n' + '<:heart:736045005596000337>: Peer Support\n\n' + '<:ambulance:736044831985369188>: Crisis Support\n\n')
-        await ctx.channel.send(embed=await build_embed('discord log', 'Triage', text))
+        msg = await ctx.channel.send(embed=await build_embed('discord log', 'Triage', text))
+        await msg.add_reaction("\U00002764")
+        await msg.add_reaction("\U0001F691")
+        await asyncio.sleep(1)
+
+        def check(reaction, user):
+            return str(reaction.emoji) in ['❤', '🚑']
+
+        reaction, user = await discordbot.wait_for('reaction_add', check=check)
+
+        print(reaction.emoji)
+        newname = ctx.channel.name
+
+        if reaction.emoji == '❤':
+            newname = re.sub(r'^ticket-', 'peer-', newname)
+            print(newname)
+            await ctx.channel.edit(name=newname)
+        elif reaction.emoji == '🚑':
+            newname = re.sub(r'^ticket-', 'crisis-', newname)
+            await ctx.channel.edit(name=newname)
+        else:
+            print("this means nothing.")
+
+        await msg.delete()
 
     await discordbot.process_commands(ctx)
-
-@discordbot.command()
-async def triage(ctx):
-    text = str('Please select the type of support you are currently seeking by reacting to this message according to your needs.\n\n' + '<:heart:736045005596000337>: Peer Support\n\n' + '<:ambulance:736044831985369188>: Crisis Support\n\n')
-    await ctx.send(embed=await build_embed('discord log', 'Triage', text))
 
 @discordbot.command()
 async def ping(ctx):
@@ -42,41 +61,6 @@ async def ping(ctx):
         await ctx.send(embed=await build_embed('discord log', 'Ping', 'Pong!'))
 
 async def build_embed(mode, title, data):
-    if mode == 'stream':
-        #get game information
-        with open('game.json', 'r') as json_file:
-            game_info = json_file.readline()
-        game_string = game_info[1:-1]
-        game_data = json.loads(game_string)
-        #turn info into usable variables
-        #create channel link
-        link = str('http://www.twitch.tv/' + data['user_name'])
-        #get and format stream preview
-        thumb = data['thumbnail_url']
-        thumb = re.sub('\-{width}x{height}.jpg$', '.jpg', thumb)
-        #get and format box art
-        boxart = game_data['box_art_url']
-        boxart = re.sub('\-{width}x{height}.jpg$', '.jpg', boxart)
-        # open and load streamer connections
-        streamers = await fetch_all_streamers()
-        # turn info into usable variables
-        #get discord account info for streamer
-        for item in streamers:
-            if  item['channel'] == str(data['user_name'].lower()):
-                user_id = int(item['discord'])
-                streamer_pic = str(item['channelpic'])
-        user = await discordbot.fetch_user(user_id)
-        author = user.display_name
-        icon = user.avatar_url
-        #build the embed
-        embed = discord.Embed(title=data['title'], url=link,color=0xCC99FF, type='rich')
-        embed.add_field(name='Game', value=game_data['name'], inline=True)
-        embed.set_thumbnail(url=boxart)
-        embed.set_image(url=thumb)
-        embed.set_author(name=str(data['user_name']), icon_url=streamer_pic)
-        footer_text = str(author + ' is streaming on Twitch as ' + str(data['user_name']))
-        embed.set_footer(text=footer_text, icon_url=icon)
-
     if mode == 'discord log':
         embed = discord.Embed(color=0x00cc99, description=data)
 
