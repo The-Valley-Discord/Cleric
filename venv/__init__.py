@@ -15,6 +15,8 @@ load_dotenv(dotenv_path=env_path)
 dtoken = os.environ.get('DISCORD_TOKEN')
 server = os.environ.get('DISCORD_SERVER')
 mod_role = os.environ.get('MOD_ROLE')
+help_role = os.environ.get('HELP_ROLE')
+crisis_role = os.environ.get('CRISIS_ROLE')
 help_category = os.environ.get('HELP_CATEGORY')
 discord_prefix = os.environ.get('DISCORD_PREFIX')
 
@@ -67,7 +69,10 @@ async def ping(ctx):
 
 @discordbot.command()
 async def crisis(ctx, user=None):
-    if ctx.channel.category_id == int(help_category):
+    qualified = False
+    if mod_role in [r.name for r in ctx.message.author.roles] or help_role in [r.name for r in ctx.message.author.roles]:
+        qualified = True
+    if ctx.channel.category_id == int(help_category) and qualified == True:
         newname = ctx.channel.name
         newname = re.sub(r'^.*?-', 'crisis-', newname)
         await ctx.channel.edit(name=newname)
@@ -77,88 +82,96 @@ async def crisis(ctx, user=None):
 
 @discordbot.command()
 async def qpr(ctx, user, score, time, *plan):
-    created = datetime.datetime.now()
-    duedate = None
-    plan = re.sub(r"[()]", "", str(plan))
-    plan = re.sub(r"[',']", " ", plan)
+    qualified = False
+    if mod_role in [r.name for r in ctx.message.author.roles] or crisis_role in [r.name for r in ctx.message.author.roles]:
+        qualified = True
+    if qualified == True:
+        created = datetime.datetime.now()
+        duedate = None
+        plan = re.sub(r"[()]", "", str(plan))
+        plan = re.sub(r"[',']", " ", plan)
 
-    timevalue = re.sub(r"[a-z]$", "", time)
-    print(timevalue)
-    unit = re.sub(r"\d", "", time)
-    print(unit)
+        timevalue = re.sub(r"[a-z]$", "", time)
+        print(timevalue)
+        unit = re.sub(r"\d", "", time)
+        print(unit)
 
-    unitname = None
-    if unit == 'd':
-        if timevalue == "1":
-            unitname = "day"
-            duedate = created + datetime.timedelta(days=int(timevalue))
+        unitname = None
+        if unit == 'd':
+            if timevalue == "1":
+                unitname = "day"
+                duedate = created + datetime.timedelta(days=int(timevalue))
+            else:
+                unitname = "days"
+                duedate = created + datetime.timedelta(days=int(timevalue))
+        elif unit == 'm':
+            if timevalue == "1":
+                unitname = "minute"
+                duedate = created + datetime.timedelta(minutes=int(timevalue))
+            else:
+                unitname = "minutes"
+                duedate = created + datetime.timedelta(minutes=int(timevalue))
+        elif unit == 's':
+            if timevalue == "1":
+                unitname = "second"
+                duedate = created + datetime.timedelta(seconds=int(timevalue))
+            else:
+                unitname = "seconds"
+                duedate = created + datetime.timedelta(seconds=int(timevalue))
+
+        screening = {
+            'user': user,
+            'score': score,
+            'plan': plan,
+            'reminderunit': unit,
+            'remindervalue': timevalue,
+            'creation': str(created),
+            'duedate': str(duedate),
+            'reminded': 'false',
+            'by': str(ctx.message.author.id)
+        }
+        print(screening)
+
+        screening_id = await get_newest_id()
+
+        await create_screening(screening)
+        if plan == '':
+            text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + " " + unitname + "\n screening id = " + screening_id)
         else:
-            unitname = "days"
-            duedate = created + datetime.timedelta(days=int(timevalue))
-    elif unit == 'm':
-        if timevalue == "1":
-            unitname = "minute"
-            duedate = created + datetime.timedelta(minutes=int(timevalue))
-        else:
-            unitname = "minutes"
-            duedate = created + datetime.timedelta(minutes=int(timevalue))
-    elif unit == 's':
-        if timevalue == "1":
-            unitname = "second"
-            duedate = created + datetime.timedelta(seconds=int(timevalue))
-        else:
-            unitname = "seconds"
-            duedate = created + datetime.timedelta(seconds=int(timevalue))
-
-    screening = {
-        'user': user,
-        'score': score,
-        'plan': plan,
-        'reminderunit': unit,
-        'remindervalue': timevalue,
-        'creation': str(created),
-        'duedate': str(duedate),
-        'reminded': 'false'
-    }
-    print(screening)
-
-    screening_id = await get_newest_id()
-
-    await create_screening(screening)
-    if plan == '':
-        text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + " " + unitname + "\n screening id = " + screening_id)
-    else:
-        text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + " " + unitname + "\n plan = " + plan + "\n screening id = " + str(screening_id))
-    msg = await ctx.channel.send(embed=await build_embed('discord log', 'QPR', text))
+            text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + " " + unitname + "\n plan = " + plan + "\n screening id = " + str(screening_id))
+        msg = await ctx.channel.send(embed=await build_embed('discord log', 'QPR', text))
 
 @discordbot.command()
 async def screening(ctx, id):
-     screening = await fetch_screening(id)
-     print(screening[0])
-     user = screening[0][1]
-     score = screening[0][2]
-     plan = screening[0][6]
-     unit = screening[0][4]
-     timevalue = screening[0][5]
-     created = screening[0][3]
-     text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + "" + unit + "\n plan = " + plan + "\n created on = " + created)
-     await ctx.channel.send(embed=await build_embed('discord log', 'QPR', text))
+    qualified = False
+    if mod_role in [r.name for r in ctx.message.author.roles] or crisis_role in [r.name for r in ctx.message.author.roles]:
+        qualified = True
+    if qualified == True:
+        await ctx.channel.send(embed=await build_embed('screening', 'screening', id))
 
 @discordbot.command()
 async def history(ctx, user):
-    screenings = await fetch_user(user)
-    if str(screenings) != "[]":
-        text = str(user + " has the following records:")
-        await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
-        for item in screenings:
-            text = str("Screening ID: " + str(item[0]) + "\n Creation Date: " + item[3])
+    qualified = False
+    if mod_role in [r.name for r in ctx.message.author.roles] or crisis_role in [r.name for r in ctx.message.author.roles]:
+        qualified = True
+    if qualified == True:
+        screenings = await fetch_user(user)
+        if str(screenings) != "[]":
+            text = str(user + " has the following records:")
             await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
-    else:
-        text = str("There are no records for " + user)
-        await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
+            for item in screenings:
+                text = str("Screening ID: " + str(item[0]) + "\n Creation Date: " + item[3])
+                await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
+        else:
+            text = str("There are no records for " + user)
+            await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
 
 @discordbot.command()
 async def discharge(ctx, id):
+    qualified = False
+    if mod_role in [r.name for r in ctx.message.author.roles]:
+        qualified = True
+    if qualified == True:
         await delete_screening(id)
         text = str("Screening removed from database.")
         await ctx.channel.send(embed=await build_embed('discord log', 'Discharge', text))
@@ -166,6 +179,21 @@ async def discharge(ctx, id):
 async def build_embed(mode, title, data):
     if mode == 'discord log':
         embed = discord.Embed(color=0x00cc99, description=data)
+    elif mode == 'screening':
+        screening = await fetch_screening(data)
+        print(screening)
+        user = screening[0][1]
+        score = screening[0][2]
+        plan = screening[0][6]
+        unit = screening[0][4]
+        timevalue = screening[0][5]
+        created = screening[0][3]
+        facilatator = screening[0][9]
+        text =  str('Participant: ' + user + '\n Screener: <@!' + facilatator + '> \n PHQ9 score: ' + score + "\n Plan for progress: " + plan + "\n Screening date: " + created)
+        embed = discord.Embed(color=0x00cc99, description=text)
+        footer_text = str('Information for screening #' + data)
+        embed.set_footer(text=footer_text)
+
 
     return embed
 
