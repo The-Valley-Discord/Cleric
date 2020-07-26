@@ -31,14 +31,20 @@ async def on_ready():
 @discordbot.event
 async def on_message(ctx):
     if ctx.author.id == 557628352828014614 and '<@&736419760778117220>' in ctx.content:
-        text = str('Please select the type of support you are currently seeking by reacting to this message according to your needs.\n\n' + '<:heart:736045005596000337>: Peer Support\n\n' + '<:ambulance:736044831985369188>: Crisis Support\n\n')
+        text = str('Please select the type of support you are currently seeking by reacting to this message according to your needs.\n\n'
+                   + '<:heart:736045005596000337> General Help - Do you need some general advice? Choose this if you need help with something that is not that serious. \n\n'
+                   + '<:question:736973684505575545> Questioning - Are you confused about your identity? Choose this for help regarding questions related to gender, sexuality, or other areas of your identity you may be confused about. \n\n'
+                   + '<:ear:736973653325119578> Vent - Do you just need a listening ear, or a void to scream into? Choose this option if you just want to let it all out without any expectation of resolving things. \n\n'
+                   + '<:ambulance:736044831985369188> Crisis - Are you currently having thoughts of self harm or suicide? Please choose this option to immediately escalate this ticket to the Crisis Team. \n\n')
         msg = await ctx.channel.send(embed=await build_embed('discord log', 'Triage', text))
         await msg.add_reaction("\U00002764")
+        await msg.add_reaction("\U00002753")
+        await msg.add_reaction("\U0001F442")
         await msg.add_reaction("\U0001F691")
         await asyncio.sleep(1)
 
         def check(reaction, user):
-            return str(reaction.emoji) in ['❤', '🚑']
+            return str(reaction.emoji) in ['❤', '👂', '❓', '🚑']
 
         reaction, user = await discordbot.wait_for('reaction_add', check=check)
 
@@ -46,7 +52,12 @@ async def on_message(ctx):
         newname = ctx.channel.name
 
         if reaction.emoji == '❤':
-            newname = re.sub(r'^ticket-', 'peer-', newname)
+            pass
+        elif reaction.emoji == '👂':
+            newname = re.sub(r'^ticket-', 'vent-', newname)
+            await ctx.channel.edit(name=newname)
+        elif reaction.emoji == '❓':
+            newname = re.sub(r'^ticket-', 'questioning-', newname)
             await ctx.channel.edit(name=newname)
         elif reaction.emoji == '🚑':
             newname = re.sub(r'^ticket-', 'crisis-', newname)
@@ -135,11 +146,10 @@ async def qpr(ctx, user, score, time, *plan):
         screening_id = await get_newest_id()
 
         await create_screening(screening)
-        if plan == '':
-            text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + " " + unitname + "\n screening id = " + screening_id)
-        else:
-            text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + " " + unitname + "\n plan = " + plan + "\n screening id = " + str(screening_id))
-        msg = await ctx.channel.send(embed=await build_embed('discord log', 'QPR', text))
+
+
+        await ctx.channel.send("The following record has been created:")
+        msg = await ctx.channel.send(embed=await build_embed('screening', 'QPR', screening_id))
 
 @discordbot.command()
 async def screening(ctx, id):
@@ -147,7 +157,7 @@ async def screening(ctx, id):
     if mod_role in [r.name for r in ctx.message.author.roles] or crisis_role in [r.name for r in ctx.message.author.roles]:
         qualified = True
     if qualified == True:
-        await ctx.channel.send(embed=await build_embed('screening', 'screening', id))
+        await ctx.channel.send(embed=await build_embed('screening', 'Screening', id))
 
 @discordbot.command()
 async def history(ctx, user):
@@ -160,8 +170,7 @@ async def history(ctx, user):
             text = str(user + " has the following records:")
             await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
             for item in screenings:
-                text = str("Screening ID: " + str(item[0]) + "\n Creation Date: " + item[3])
-                await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
+                await ctx.channel.send(embed=await build_embed('screening', 'History', item[0]))
         else:
             text = str("There are no records for " + user)
             await ctx.channel.send(embed=await build_embed('discord log', 'History', text))
@@ -189,9 +198,12 @@ async def build_embed(mode, title, data):
         timevalue = screening[0][5]
         created = screening[0][3]
         facilatator = screening[0][9]
-        text =  str('Participant: ' + user + '\n Screener: <@!' + facilatator + '> \n PHQ9 score: ' + score + "\n Plan for progress: " + plan + "\n Screening date: " + created)
+
+        date = datetime.datetime.strptime(created, '%Y-%m-%d %H:%M:%S.%f').strftime('%m-%d-%y at %H:%M')
+
+        text =  str('Participant: ' + user + '\n Screener: <@!' + facilatator + '> \n PHQ9 score: ' + score + "\n Screening date: " + str(date) + "\n Plan for progress: " + plan)
         embed = discord.Embed(color=0x00cc99, description=text)
-        footer_text = str('Information for screening #' + data)
+        footer_text = str('Information for screening #' + str(data))
         embed.set_footer(text=footer_text)
 
 
@@ -354,8 +366,8 @@ async def set_reminder_status(id):
         unit = screening[0][4]
         timevalue = screening[0][5]
         created = screening[0][3]
-        text = str('user = ' + user + '\n score = ' + score + '\n reminder = ' + timevalue + "" + unit + "\n plan = " + plan + "\n created on = " + created)
-        await channel.send(content="<@&736615019172593778> the following screening requires a followup.", embed=await build_embed('discord log', 'Follow Up', text))
+
+        await channel.send(content="<@&736615019172593778> the following screening requires a followup.", embed=await build_embed('screening', 'Follow Up', id))
     except conn.Error as error:
         print("Failed to write to a row from sqlite table", error)
     finally:
