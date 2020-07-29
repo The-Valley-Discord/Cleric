@@ -7,3 +7,4 @@ venv/.env
 venv/.env
 venv/cleric.db
 *.db
+venv/cleric.db

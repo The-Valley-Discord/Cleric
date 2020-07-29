@@ -254,13 +254,10 @@ async def get_newest_id():
 async def create_screening(screening):
     try:
         conn = await create_connection()
-        cursor = conn.cursor()
-        columns = ', '.join(str('`'+x+'`').replace('/', '_') for x in screening.keys())
-        values = ', '.join(str("'"+x+"'").replace('/', '_') for x in screening.values())
-        sql = "INSERT INTO %s ( %s ) VALUES ( %s );" % ('screenings', columns, values)
-        print(sql)
-        cursor.execute(sql)
-        cursor.close()
+        conn.execute(
+            f"INSERT INTO screenings({','.join(screening.keys())}) VALUES({','.join(['?' for v in screening.values()])})",
+            tuple(screening.values())
+        )
     except conn.Error as error:
         print("Failed to write single row to sqlite table", error)
     finally:
@@ -272,11 +269,9 @@ async def create_screening(screening):
 async def delete_screening(id):
     try:
         conn = await create_connection()
-        cursor = conn.cursor()
-        sql = str("DELETE FROM screenings where `id` = '" + id + "';")
-        print(sql)
-        cursor.execute(sql)
-        cursor.close()
+        conn.execute(
+            "DELETE FROM screenings where id=:id",{"id": id}
+        )
     except conn.Error as error:
         print("Failed to remove single row to sqlite table", error)
     finally:
@@ -288,12 +283,9 @@ async def delete_screening(id):
 async def fetch_screening(id):
     try:
         conn = await create_connection()
-        cursor = conn.cursor()
-        sql = """SELECT * from screenings WHERE id = ( %s ) """ % (id)
-        print(sql)
-        cursor.execute(sql)
-        screening = cursor.fetchall()
-        cursor.close()
+        screening = conn.execute(
+            "SELECT * FROM screenings WHERE id=:id", {"id": id}
+        ).fetchall()
 
         return screening
     except conn.Error as error:
@@ -307,13 +299,10 @@ async def fetch_screening(id):
 async def fetch_user(user):
     try:
         conn = await create_connection()
-        cursor = conn.cursor()
-        sql = """SELECT * from screenings WHERE user = ( "%s" ); """ % (user)
-        print(sql)
-        cursor.execute(sql)
-        screenings = cursor.fetchall()
-        cursor.close()
-        print(screenings)
+        screenings = conn.execute(
+            "SELECT * FROM screenings WHERE user=:user", {"user": user}
+        ).fetchall()
+
         return screenings
     except conn.Error as error:
         print("Failed to read from sqlite table", error)
@@ -351,13 +340,10 @@ async def reminders():
 async def set_reminder_status(id):
     try:
         conn = await create_connection()
-        cursor = conn.cursor()
-        conn = await create_connection()
-        cursor = conn.cursor()
-        sql = """UPDATE screenings SET reminded = "true" WHERE id = {0} """.format(id)
-        print(sql)
-        cursor.execute(sql)
-        cursor.close()
+        conn.execute(
+            "UPDATE screenings SET reminded = true WHERE id=:id", {"id": id}
+        )
+
         channel = discordbot.get_channel(736709932245843970)
         screening = await fetch_screening(id)
         user = screening[0][1]
