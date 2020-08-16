@@ -30,7 +30,7 @@ async def on_ready():
 
 @discordbot.event
 async def on_message(ctx):
-    if ctx.author.id == 557628352828014614 and '<@&736419760778117220>' in ctx.content:
+    if ctx.author.id == 557628352828014614 and '<@&679856667592228939>' in ctx.content:
         text = str('Please select the type of support you are currently seeking by reacting to this message according to your needs.\n\n'
                    + '<:heart:736045005596000337> General Help - Do you need some general advice? Choose this if you need help with something that does not fit in the other categories. \n\n'
                    + '<:question:736973684505575545> Questioning - Are you confused about your identity? Choose this for help regarding questions related to gender, sexuality, or other areas of your identity you may be confused about. \n\n'
@@ -54,15 +54,15 @@ async def on_message(ctx):
         if reaction.emoji == '❤':
             pass
         elif reaction.emoji == '👂':
-            newname = re.sub(r'^ticket-', 'vent-', newname)
+            newname = re.sub(r'^help-', 'vent-', newname)
             await ctx.channel.edit(name=newname)
         elif reaction.emoji == '❓':
-            newname = re.sub(r'^ticket-', 'questioning-', newname)
+            newname = re.sub(r'^help-', 'questioning-', newname)
             await ctx.channel.edit(name=newname)
         elif reaction.emoji == '🚑':
-            newname = re.sub(r'^ticket-', 'crisis-', newname)
+            newname = re.sub(r'^help-', 'crisis-', newname)
             await ctx.channel.edit(name=newname)
-            text = "Please take a moment to complete this screening. Once finished, let us know the results so that we can better support you. A member of the <@&736615019172593778> will be with you as soon as possible."
+            text = "Please take a moment to complete this screening. Once finished, let us know the results so that we can better support you. A member of the <@&744659137698463804> will be with you as soon as possible."
             await ctx.channel.send("https://www.mdcalc.com/phq-9-patient-health-questionnaire-9")
             await ctx.channel.send(text)
 
@@ -99,7 +99,7 @@ async def crisis(ctx, user=None):
         newname = ctx.channel.name
         newname = re.sub(r'^.*?-', 'crisis-', newname)
         await ctx.channel.edit(name=newname)
-        text = "Please take a moment to complete this screening. Once finished, let us know the results so that we can better support you. A member of the <@&736615019172593778> will be with you as soon as possible."
+        text = "Please take a moment to complete this screening. Once finished, let us know the results so that we can better support you. A member of the <@&744583962210599116> will be with you as soon as possible."
         await ctx.channel.send("https://www.mdcalc.com/phq-9-patient-health-questionnaire-9")
         await ctx.channel.send(text)
 
@@ -356,7 +356,7 @@ async def set_reminder_status(id):
             "UPDATE screenings SET reminded = true WHERE id=:id", {"id": id}
         )
 
-        channel = discordbot.get_channel(736709932245843970)
+        channel = discordbot.get_channel(680210208496418847)
         screening = await fetch_screening(id)
         user = screening[0][1]
         score = screening[0][2]
@@ -365,7 +365,7 @@ async def set_reminder_status(id):
         timevalue = screening[0][5]
         created = screening[0][3]
 
-        await channel.send(content="<@&736615019172593778> the following screening requires a followup.", embed=await build_embed('screening', 'Follow Up', id))
+        await channel.send(content="<@&744583962210599116> the following screening requires a followup.", embed=await build_embed('screening', 'Follow Up', id))
     except conn.Error as error:
         print("Failed to write to a row from sqlite table", error)
     finally:
