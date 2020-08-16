@@ -32,7 +32,7 @@ async def on_ready():
 async def on_message(ctx):
     if ctx.author.id == 557628352828014614 and '<@&736419760778117220>' in ctx.content:
         text = str('Please select the type of support you are currently seeking by reacting to this message according to your needs.\n\n'
-                   + '<:heart:736045005596000337> General Help - Do you need some general advice? Choose this if you need help with something that is not that serious. \n\n'
+                   + '<:heart:736045005596000337> General Help - Do you need some general advice? Choose this if you need help with something that does not fit in the other categories. \n\n'
                    + '<:question:736973684505575545> Questioning - Are you confused about your identity? Choose this for help regarding questions related to gender, sexuality, or other areas of your identity you may be confused about. \n\n'
                    + '<:ear:736973653325119578> Vent - Do you just need a listening ear, or a void to scream into? Choose this option if you just want to let it all out without any expectation of resolving things. \n\n'
                    + '<:ambulance:736044831985369188> Crisis - Are you currently having thoughts of self harm or suicide? Please choose this option to immediately escalate this ticket to the Crisis Team. \n\n')
@@ -77,6 +77,18 @@ async def ping(ctx):
         qualified = True
     if qualified == True:
         await ctx.send(embed=await build_embed('discord log', 'Ping', 'Pong!'))
+
+discordbot.remove_command('help')
+@discordbot.command()
+async def help(ctx):
+    text =  "**Information and Commands:**\n" \
+            "Cleric is a bot designed for triage of help tickets and tracking of crisis screenings. \n\n" \
+            "**crisis** - transfer an open ticket to the crisis team. \n" \
+            "**qpr (user mention) (score) (time before followup i.e., 7d) (safety plan)** - use this command to log a screening after it is complete \n" \
+            "**history (user mention)** - check screening history for a user \n" \
+            "**screening (screening id)** - look up information for a specific screening \n" \
+            "**discharge (screening id)** - remove a screening from a user's history"
+    await ctx.send(embed=await build_embed('discord log', 'Help', text))
 
 @discordbot.command()
 async def crisis(ctx, user=None):
