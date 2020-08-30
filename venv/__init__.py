@@ -34,7 +34,7 @@ async def on_message(ctx):
         text = str('Please select the type of support you are currently seeking by reacting to this message according to your needs.\n\n'
                    + '<:heart:736045005596000337> General Help - Do you need some general advice? Choose this if you need help with something that does not fit in the other categories. \n\n'
                    + '<:question:736973684505575545> Questioning - Are you confused about your identity? Choose this for help regarding questions related to gender, sexuality, or other areas of your identity you may be confused about. \n\n'
-                   + '<:ear:736973653325119578> Vent - Do you just need a listening ear, or a void to scream into? Choose this option if you just want to let it all out without any expectation of resolving things. \n\n'
+                   + '<:ear:736973653325119578> Vent - Do you just need a listening ear, or a void to scream into? Choose this option if you just want to let it all out without any expectation of resolving things. ***Helpers only respond to vent tickets if they are pinged by you*** \n\n'
                    + '<:ambulance:736044831985369188> Crisis - Are you currently having thoughts of self harm or suicide? Please choose this option to immediately escalate this ticket to the Crisis Team. \n\n')
         msg = await ctx.channel.send(embed=await build_embed('discord log', 'Triage', text))
         await msg.add_reaction("\U00002764")
@@ -52,17 +52,22 @@ async def on_message(ctx):
         newname = ctx.channel.name
 
         if reaction.emoji == '❤':
-            pass
+            text = "Please take a moment to describe what you need help with and a helper will be with you as soon as possible."
+            await ctx.channel.send(text)
         elif reaction.emoji == '👂':
             newname = re.sub(r'^help-', 'vent-', newname)
             await ctx.channel.edit(name=newname)
+            text = "This is now a vent ticket. If you would like to speak with a helper, please ping the role, otherwise feel free to use this space to vent as you wish."
+            await ctx.channel.send(text)
         elif reaction.emoji == '❓':
             newname = re.sub(r'^help-', 'questioning-', newname)
             await ctx.channel.edit(name=newname)
+            text = "Please take a moment to describe what you need help with and a helper will be with you as soon as possible."
+            await ctx.channel.send(text)
         elif reaction.emoji == '🚑':
             newname = re.sub(r'^help-', 'crisis-', newname)
             await ctx.channel.edit(name=newname)
-            text = "Please take a moment to complete this screening. Once finished, let us know the results so that we can better support you. A member of the <@&744659137698463804> will be with you as soon as possible."
+            text = "Please take a moment to complete this screening. Once finished, let us know the results so that we can better support you. A member of the <@&744583962210599116> will be with you as soon as possible."
             await ctx.channel.send("https://www.mdcalc.com/phq-9-patient-health-questionnaire-9")
             await ctx.channel.send(text)
 
@@ -83,7 +88,7 @@ discordbot.remove_command('help')
 async def help(ctx):
     text =  "**Information and Commands:**\n" \
             "Cleric is a bot designed for triage of help tickets and tracking of crisis screenings. \n\n" \
-            "**crisis** - transfer an open ticket to the crisis team. \n" \
+            "**crisis** - transfer an open ticket to the crisis team. **ONLY USE THIS IN TICKETS** \n" \
             "**qpr (user mention) (score) (time before followup i.e., 7d) (safety plan)** - use this command to log a screening after it is complete \n" \
             "**history (user mention)** - check screening history for a user \n" \
             "**screening (screening id)** - look up information for a specific screening \n" \
